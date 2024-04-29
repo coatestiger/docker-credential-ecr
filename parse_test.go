@@ -13,12 +13,12 @@ func TestParse(t *testing.T) {
 			DNSSuffix: "public.ecr.aws",
 		},
 		"123456789012.dkr.ecr.us-west-2.amazonaws.com": {
-			ID:        "123456789012",
+			AccountID: "123456789012",
 			Region:    "us-west-2",
 			DNSSuffix: "amazonaws.com",
 		},
 		"123456789012.dkr.ecr-fips.us-west-2.amazonaws.com": {
-			ID:        "123456789012",
+			AccountID: "123456789012",
 			Region:    "us-west-2",
 			FIPS:      true,
 			DNSSuffix: "amazonaws.com",
