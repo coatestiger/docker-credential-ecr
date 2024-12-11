@@ -70,7 +70,7 @@ func (authenticator *ecrAuthenticator) Authorization() (*authn.AuthConfig, error
 	return authConfig, nil
 }
 
-// NewAuthenticator returns a new Authenticator instance from the given ECR client.
+// NewAuthenticatorWithEarlyExpiry returns a new Authenticator instance with a custom earlyExpiry value.
 func NewAuthenticatorWithEarlyExpiry(client *ecr.Client, earlyExpiry time.Duration) authn.Authenticator {
 	return &ecrAuthenticator{client: client, earlyExpiry: earlyExpiry}
 }
