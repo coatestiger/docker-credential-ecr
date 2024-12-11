@@ -14,6 +14,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 )
 
+// DefaultEarlyExpiry is used by NewAuthenticator when earlyExpiry is unspecified
+var DefaultEarlyExpiry = 15 * time.Minute
+
 type ecrClient interface {
 	GetAuthorizationToken(ctx context.Context, params *ecr.GetAuthorizationTokenInput, optFns ...func(*ecr.Options)) (*ecr.GetAuthorizationTokenOutput, error)
 }
@@ -68,6 +71,12 @@ func (authenticator *ecrAuthenticator) Authorization() (*authn.AuthConfig, error
 }
 
 // NewAuthenticator returns a new Authenticator instance from the given ECR client.
-func NewAuthenticator(client *ecr.Client, earlyExpiry time.Duration) authn.Authenticator {
+func NewAuthenticatorWithEarlyExpiry(client *ecr.Client, earlyExpiry time.Duration) authn.Authenticator {
 	return &ecrAuthenticator{client: client, earlyExpiry: earlyExpiry}
 }
+
+// NewAuthenticator returns a new Authenticator instance from the given ECR client.
+func NewAuthenticator(client *ecr.Client) authn.Authenticator {
+	return NewAuthenticatorWithEarlyExpiry(client, DefaultEarlyExpiry)
+}
+
