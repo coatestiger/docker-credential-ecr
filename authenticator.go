@@ -14,6 +14,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 )
 
+// DefaultEarlyExpiry is used by NewAuthenticator when earlyExpiry is unspecified
+var DefaultEarlyExpiry = 15 * time.Minute
+
 type ecrClient interface {
 	GetAuthorizationToken(ctx context.Context, params *ecr.GetAuthorizationTokenInput, optFns ...func(*ecr.Options)) (*ecr.GetAuthorizationTokenOutput, error)
 }
@@ -27,8 +30,9 @@ type cachedAuthConfig struct {
 // ecrAuthenticator implements an authn.Authenticator that can authenticate to ECR.
 // It caches the authorization token until it expires reducing the round-trips to ECR.
 type ecrAuthenticator struct {
-	client ecrClient
-	cache  atomic.Pointer[cachedAuthConfig]
+	client      ecrClient
+	earlyExpiry time.Duration
+	cache       atomic.Pointer[cachedAuthConfig]
 }
 
 func (authenticator *ecrAuthenticator) Authorization() (*authn.AuthConfig, error) {
@@ -61,12 +65,18 @@ func (authenticator *ecrAuthenticator) Authorization() (*authn.AuthConfig, error
 	// Cache the result and return it.
 	authenticator.cache.Store(&cachedAuthConfig{
 		AuthConfig: authConfig,
-		ExpiresAt:  expiry,
+		ExpiresAt:  expiry.Add(-authenticator.earlyExpiry),
 	})
 	return authConfig, nil
 }
 
+// NewAuthenticatorWithEarlyExpiry returns a new Authenticator instance with a custom earlyExpiry value.
+func NewAuthenticatorWithEarlyExpiry(client *ecr.Client, earlyExpiry time.Duration) authn.Authenticator {
+	return &ecrAuthenticator{client: client, earlyExpiry: earlyExpiry}
+}
+
 // NewAuthenticator returns a new Authenticator instance from the given ECR client.
 func NewAuthenticator(client *ecr.Client) authn.Authenticator {
-	return &ecrAuthenticator{client: client}
+	return NewAuthenticatorWithEarlyExpiry(client, DefaultEarlyExpiry)
 }
+

@@ -13,9 +13,10 @@ import (
 
 // ecrKeychain implements the authn.Keychain interface.
 type ecrKeychain struct {
-	cfg     aws.Config
-	cache   map[string]authn.Authenticator
-	cacheMu sync.RWMutex
+	cfg         aws.Config
+	cache       map[string]authn.Authenticator
+	cacheMu     sync.RWMutex
+	earlyExpiry time.Duration
 }
 
 // Resolve returns an authn.Authenticator instance for the given registry or authn.Anonymous if not an ECR URL.
@@ -37,7 +38,7 @@ func (keychain *ecrKeychain) Resolve(resource authn.Resource) (authn.Authenticat
 			opts.EndpointOptions.UseFIPSEndpoint = aws.FIPSEndpointStateEnabled
 		}
 	})
-	authenticator := NewAuthenticator(client)
+	authenticator := NewAuthenticatorWithEarlyExpiry(client, keychain.earlyExpiry)
 	keychain.cacheMu.Lock()
 	defer keychain.cacheMu.Unlock()
 	if auth, ok := keychain.cache[key]; ok {
@@ -47,12 +48,18 @@ func (keychain *ecrKeychain) Resolve(resource authn.Resource) (authn.Authenticat
 	return authenticator, nil
 }
 
+// NewKeychainWithEarlyExpiry returns a new Keychain instance with a custom earlyExpiry value.
+func NewKeychainWithEarlyExpiry(cfg aws.Config, earlyExpiry time.Duration) authn.Keychain {
+	return &ecrKeychain{
+		cfg:         cfg,
+		cache:       make(map[string]authn.Authenticator),
+		earlyExpiry: earlyExpiry,
+	}
+}
+
 // NewKeychain returns a new Keychain instance that uses the provided AWS configuration.
 func NewKeychain(cfg aws.Config) authn.Keychain {
-	return &ecrKeychain{
-		cfg:   cfg,
-		cache: make(map[string]authn.Authenticator),
-	}
+	return NewKeychainWithEarlyExpiry(cfg, DefaultEarlyExpiry)
 }
 
 // DefaultKeychain uses the default AWS credentials chain.
