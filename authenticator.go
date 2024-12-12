@@ -29,15 +29,15 @@ type cachedAuthConfig struct {
 
 // ecrAuthenticator implements an authn.Authenticator that can authenticate to ECR.
 // It caches the authorization token until it expires reducing the round-trips to ECR.
-type ecrAuthenticator struct {
+type EcrAuthenticator struct {
 	client      ecrClient
 	earlyExpiry time.Duration
-	cache       atomic.Pointer[cachedAuthConfig]
+	Cache       atomic.Pointer[cachedAuthConfig]
 }
 
-func (authenticator *ecrAuthenticator) Authorization() (*authn.AuthConfig, error) {
+func (authenticator *EcrAuthenticator) Authorization() (*authn.AuthConfig, error) {
 	// Check if we have a cached token already and it hasn't expired.
-	if cached := authenticator.cache.Load(); cached != nil && time.Now().Before(cached.ExpiresAt) {
+	if cached := authenticator.Cache.Load(); cached != nil && time.Now().Before(cached.ExpiresAt) {
 		return cached.AuthConfig, nil
 	}
 
@@ -63,7 +63,7 @@ func (authenticator *ecrAuthenticator) Authorization() (*authn.AuthConfig, error
 	authConfig := &authn.AuthConfig{Username: username, Password: password}
 
 	// Cache the result and return it.
-	authenticator.cache.Store(&cachedAuthConfig{
+	authenticator.Cache.Store(&cachedAuthConfig{
 		AuthConfig: authConfig,
 		ExpiresAt:  expiry.Add(-authenticator.earlyExpiry),
 	})
